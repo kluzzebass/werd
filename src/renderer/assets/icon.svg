@@ -1,11 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2b579a"/>
-      <stop offset="100%" style="stop-color:#1e3f6f"/>
+    <linearGradient id="docGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#41a5ee"/>
+      <stop offset="100%" stop-color="#2b7cd3"/>
     </linearGradient>
+    <linearGradient id="panelGrad" x1="0" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#2b579a"/>
+      <stop offset="100%" stop-color="#1a3563"/>
+    </linearGradient>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
   </defs>
-  <rect width="512" height="512" rx="80" fill="url(#bg)"/>
-  <text x="256" y="320" font-family="Georgia, serif" font-size="280" font-weight="bold" fill="white" text-anchor="middle">W</text>
-  <text x="256" y="440" font-family="Arial, sans-serif" font-size="60" fill="rgba(255,255,255,0.7)" text-anchor="middle">one word</text>
+
+  <!-- Document background (lighter blue, right side) -->
+  <rect x="280" y="80" width="620" height="864" rx="40" fill="url(#docGrad)" filter="url(#shadow)"/>
+
+  <!-- Document lines (subtle) -->
+  <rect x="420" y="240" width="360" height="16" rx="8" fill="#fff" opacity="0.3"/>
+  <rect x="420" y="310" width="320" height="16" rx="8" fill="#fff" opacity="0.25"/>
+  <rect x="420" y="380" width="340" height="16" rx="8" fill="#fff" opacity="0.2"/>
+  <rect x="420" y="450" width="280" height="16" rx="8" fill="#fff" opacity="0.15"/>
+
+  <!-- Left panel (dark blue with W) -->
+  <rect x="100" y="170" width="460" height="684" rx="48" fill="url(#panelGrad)" filter="url(#shadow)"/>
+
+  <!-- W letter -->
+  <text x="330" y="600" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="420" fill="#ffffff" text-anchor="middle" letter-spacing="-10">W</text>
 </svg>

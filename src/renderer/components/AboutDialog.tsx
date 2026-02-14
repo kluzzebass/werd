@@ -18,7 +18,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({ isOpen, onClose }) => 
         <p className="text-gray-500 text-sm mb-4">The One-Word Word Processor</p>
 
         <p className="text-gray-600 text-sm mb-4">
-          A word processor where each page contains exactly one word.
+          What if Word did what the name suggests?
         </p>
 
         <p className="text-gray-500 text-xs italic mb-4">

@@ -39,6 +39,12 @@ jobs:
           security import signing.p12 -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
           security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN"
 
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          node -e "const p=require('./package.json'); p.version='$VERSION'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2)+'\n')"
+          echo "Version set to $VERSION"
+
       - name: Build, sign, notarize, package
         env:
           SIGN_IDENTITY: ${{ secrets.SIGN_IDENTITY }}
@@ -72,6 +78,12 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Set version from tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          node -e "const p=require('./package.json'); p.version='$VERSION'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2)+'\n')"
+
       - name: Install dependencies
         run: bun install
 
@@ -97,6 +109,11 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          node -e "const p=require('./package.json'); p.version='$VERSION'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2)+'\n')"
 
       - name: Install dependencies
         run: bun install
@@ -129,8 +146,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="$(node -p "require('./package.json').version")"
-          TAG="v${VERSION}"
+          TAG="${GITHUB_REF#refs/tags/}"
 
           # Create release if it doesn't exist
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes "Automated release for $TAG"

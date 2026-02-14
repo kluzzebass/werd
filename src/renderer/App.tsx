@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useDocumentStore } from './store/document'
+import { useSelectionStore } from './store/selection'
 import { WordArea } from './components/WordArea'
 import { Toolbar } from './components/Toolbar'
 import { FormatWordDialog } from './components/FormatWordDialog'
@@ -34,7 +35,6 @@ export const App: React.FC = () => {
   const getDocumentData = useDocumentStore(state => state.getDocumentData)
   const setFilePath = useDocumentStore(state => state.setFilePath)
   const setDirty = useDocumentStore(state => state.setDirty)
-  const updateWordFormat = useDocumentStore(state => state.updateWordFormat)
   const undo = useDocumentStore(state => state.undo)
   const redo = useDocumentStore(state => state.redo)
   const saveToHistory = useDocumentStore(state => state.saveToHistory)
@@ -166,7 +166,7 @@ export const App: React.FC = () => {
       if (file) {
         try {
           const wordEntry = await importFromDocx(file)
-          loadDocument({ version: '2.0', word: wordEntry })
+          loadDocument({ version: '1.0', word: wordEntry })
         } catch {
           alert('Failed to import .docx file')
         }
@@ -317,20 +317,27 @@ export const App: React.FC = () => {
         return
       }
 
-      // Formatting shortcuts (Ctrl+B/I/U)
+      // Formatting shortcuts (Ctrl+B/I/U) — selection-aware
       if (isMod && ['b', 'i', 'u'].includes(e.key.toLowerCase())) {
         e.preventDefault()
-        const format = word.format
-        switch (e.key.toLowerCase()) {
-          case 'b':
-            updateWordFormat({ bold: !format.bold })
-            break
-          case 'i':
-            updateWordFormat({ italic: !format.italic })
-            break
-          case 'u':
-            updateWordFormat({ underline: !format.underline })
-            break
+        const { hasSelection, selectionStart, selectionEnd } = useSelectionStore.getState()
+        const store = useDocumentStore.getState()
+
+        const key = e.key.toLowerCase() === 'b' ? 'bold'
+          : e.key.toLowerCase() === 'i' ? 'italic'
+          : 'underline'
+
+        if (hasSelection) {
+          const common = store.getCommonCharFormat(selectionStart, selectionEnd)
+          const currentVal = common[key as keyof typeof common]
+          store.updateCharFormat(
+            { [key]: currentVal === undefined ? true : !currentVal },
+            selectionStart,
+            selectionEnd
+          )
+        } else {
+          const fmt = store.getCharFormatAt(Math.max(0, selectionStart - 1))
+          store.updateAllCharFormat({ [key]: !fmt[key as keyof typeof fmt] })
         }
         return
       }
@@ -338,7 +345,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [word, updateWordFormat])
+  }, [undo, redo])
 
   return (
     <div className="h-screen flex flex-col bg-white">

@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFillDrip } from '@fortawesome/free-solid-svg-icons'
 import { useDocumentStore } from '../store/document'
-import { TextAlign } from '@shared/types'
+import { useSelectionStore } from '../store/selection'
+import { CharFormat, TextAlign } from '@shared/types'
 import { FONT_FAMILIES } from '../utils/formatValue'
 import { ThemeToggle } from './ThemeToggle'
 import { FileMenu } from './FileMenu'
@@ -22,13 +23,17 @@ interface ToolbarProps {
 // Reusable toolbar button component
 const ToolbarButton: React.FC<{
   active?: boolean
+  indeterminate?: boolean
   onClick: () => void
   title: string
   children: React.ReactNode
   className?: string
-}> = ({ active, onClick, title, children, className = '' }) => (
+}> = ({ active, indeterminate, onClick, title, children, className = '' }) => (
   <button
-    className={`w-7 h-7 flex items-center justify-center rounded text-sm ${active ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-200'} ${className}`}
+    className={`w-7 h-7 flex items-center justify-center rounded text-sm ${
+      indeterminate ? 'bg-blue-50 border border-blue-200' :
+      active ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-200'
+    } ${className}`}
     onClick={onClick}
     title={title}
   >
@@ -61,7 +66,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 }) => {
   const word = useDocumentStore(state => state.word)
   const updateWordFormat = useDocumentStore(state => state.updateWordFormat)
+  const updateCharFormat = useDocumentStore(state => state.updateCharFormat)
+  const updateAllCharFormat = useDocumentStore(state => state.updateAllCharFormat)
+  const getCommonCharFormat = useDocumentStore(state => state.getCommonCharFormat)
+  const getCharFormatAt = useDocumentStore(state => state.getCharFormatAt)
   const isDirty = useDocumentStore(state => state.isDirty)
+
+  const { selectionStart, selectionEnd, hasSelection } = useSelectionStore()
 
   const [showFontColorPicker, setShowFontColorPicker] = useState(false)
   const [showBgColorPicker, setShowBgColorPicker] = useState(false)
@@ -81,10 +92,23 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     }
   }
 
-  const format = word.format
+  // Get current char format based on selection
+  const currentCharFormat: Partial<CharFormat> = hasSelection
+    ? getCommonCharFormat(selectionStart, selectionEnd)
+    : getCharFormatAt(Math.max(0, selectionStart - 1))
 
-  const toggleFormat = (key: 'bold' | 'italic' | 'underline' | 'strikethrough') => {
-    updateWordFormat({ [key]: !format[key] })
+  const applyCharFormat = (format: Partial<CharFormat>) => {
+    if (hasSelection) {
+      updateCharFormat(format, selectionStart, selectionEnd)
+    } else {
+      updateAllCharFormat(format)
+    }
+  }
+
+  const toggleCharFormat = (key: 'bold' | 'italic' | 'underline' | 'strikethrough') => {
+    const currentVal = currentCharFormat[key]
+    // If mixed (undefined), set to true; otherwise toggle
+    applyCharFormat({ [key]: currentVal === undefined ? true : !currentVal })
   }
 
   const setAlignment = (align: TextAlign) => {
@@ -92,20 +116,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   }
 
   const setFontSize = (size: number) => {
-    updateWordFormat({ fontSize: size })
+    applyCharFormat({ fontSize: size })
   }
 
   const setFontFamily = (family: string) => {
-    updateWordFormat({ fontFamily: family })
+    applyCharFormat({ fontFamily: family })
   }
 
   const setFontColor = (color: string) => {
-    updateWordFormat({ fontColor: color })
+    applyCharFormat({ fontColor: color })
     setShowFontColorPicker(false)
   }
 
   const setBgColor = (color: string) => {
-    updateWordFormat({ backgroundColor: color })
+    applyCharFormat({ backgroundColor: color })
     setShowBgColorPicker(false)
   }
 
@@ -156,20 +180,26 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             {/* Row 1: Font family and size */}
             <div className="flex items-center gap-0.5">
               <select
-                value={format.fontFamily}
+                value={currentCharFormat.fontFamily ?? ''}
                 onChange={(e) => setFontFamily(e.target.value)}
                 className="h-6 px-1 text-xs border border-gray-300 rounded bg-white w-28"
-                style={{ fontFamily: format.fontFamily }}
+                style={{ fontFamily: currentCharFormat.fontFamily }}
               >
+                {currentCharFormat.fontFamily === undefined && (
+                  <option value="">Mixed</option>
+                )}
                 {FONT_FAMILIES.map(font => (
                   <option key={font} value={font} style={{ fontFamily: font }}>{font}</option>
                 ))}
               </select>
               <select
-                value={format.fontSize}
+                value={currentCharFormat.fontSize ?? ''}
                 onChange={(e) => setFontSize(Number(e.target.value))}
                 className="h-6 px-1 text-xs border border-gray-300 rounded bg-white w-14"
               >
+                {currentCharFormat.fontSize === undefined && (
+                  <option value="">-</option>
+                )}
                 {fontSizes.map(size => (
                   <option key={size} value={size}>{size}</option>
                 ))}
@@ -177,16 +207,36 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             </div>
             {/* Row 2: Formatting buttons */}
             <div className="flex items-center gap-0.5">
-              <ToolbarButton active={format.bold} onClick={() => toggleFormat('bold')} title="Bold (⌘B)">
+              <ToolbarButton
+                active={currentCharFormat.bold === true}
+                indeterminate={currentCharFormat.bold === undefined}
+                onClick={() => toggleCharFormat('bold')}
+                title="Bold (⌘B)"
+              >
                 <span className="font-bold">B</span>
               </ToolbarButton>
-              <ToolbarButton active={format.italic} onClick={() => toggleFormat('italic')} title="Italic (⌘I)">
+              <ToolbarButton
+                active={currentCharFormat.italic === true}
+                indeterminate={currentCharFormat.italic === undefined}
+                onClick={() => toggleCharFormat('italic')}
+                title="Italic (⌘I)"
+              >
                 <span className="italic font-serif">I</span>
               </ToolbarButton>
-              <ToolbarButton active={format.underline} onClick={() => toggleFormat('underline')} title="Underline (⌘U)">
+              <ToolbarButton
+                active={currentCharFormat.underline === true}
+                indeterminate={currentCharFormat.underline === undefined}
+                onClick={() => toggleCharFormat('underline')}
+                title="Underline (⌘U)"
+              >
                 <span className="underline">U</span>
               </ToolbarButton>
-              <ToolbarButton active={format.strikethrough} onClick={() => toggleFormat('strikethrough')} title="Strikethrough">
+              <ToolbarButton
+                active={currentCharFormat.strikethrough === true}
+                indeterminate={currentCharFormat.strikethrough === undefined}
+                onClick={() => toggleCharFormat('strikethrough')}
+                title="Strikethrough"
+              >
                 <span className="line-through">ab</span>
               </ToolbarButton>
 
@@ -205,7 +255,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                   title="Highlight Color"
                 >
                   <FontAwesomeIcon icon={faFillDrip} className="text-xs" />
-                  <div className="w-5 h-1 mt-px rounded-sm" style={{ backgroundColor: format.backgroundColor === '#ffffff' ? '#ffff00' : format.backgroundColor }} />
+                  <div className="w-5 h-1 mt-px rounded-sm" style={{ backgroundColor: (currentCharFormat.backgroundColor ?? 'transparent') === 'transparent' ? '#ffff00' : currentCharFormat.backgroundColor }} />
                 </button>
               </div>
 
@@ -222,7 +272,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                   title="Font Color"
                 >
                   <span className="text-sm font-bold leading-none">A</span>
-                  <div className="w-5 h-1 mt-px rounded-sm" style={{ backgroundColor: format.fontColor }} />
+                  <div className="w-5 h-1 mt-px rounded-sm" style={{ backgroundColor: currentCharFormat.fontColor ?? '#000000' }} />
                 </button>
               </div>
             </div>
@@ -232,13 +282,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         {/* Paragraph Section */}
         <ToolbarSection label="Paragraph">
           <div className="flex items-center gap-0.5">
-            <ToolbarButton active={format.textAlign === 'left'} onClick={() => setAlignment('left')} title="Align Left">
+            <ToolbarButton active={word.format.textAlign === 'left'} onClick={() => setAlignment('left')} title="Align Left">
               <svg viewBox="0 0 16 16" className="w-3.5 h-3.5"><line x1="1" y1="3" x2="15" y2="3" stroke="currentColor" strokeWidth="2"/><line x1="1" y1="8" x2="10" y2="8" stroke="currentColor" strokeWidth="2"/><line x1="1" y1="13" x2="13" y2="13" stroke="currentColor" strokeWidth="2"/></svg>
             </ToolbarButton>
-            <ToolbarButton active={format.textAlign === 'center'} onClick={() => setAlignment('center')} title="Center">
+            <ToolbarButton active={word.format.textAlign === 'center'} onClick={() => setAlignment('center')} title="Center">
               <svg viewBox="0 0 16 16" className="w-3.5 h-3.5"><line x1="1" y1="3" x2="15" y2="3" stroke="currentColor" strokeWidth="2"/><line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="2"/><line x1="2" y1="13" x2="14" y2="13" stroke="currentColor" strokeWidth="2"/></svg>
             </ToolbarButton>
-            <ToolbarButton active={format.textAlign === 'right'} onClick={() => setAlignment('right')} title="Align Right">
+            <ToolbarButton active={word.format.textAlign === 'right'} onClick={() => setAlignment('right')} title="Align Right">
               <svg viewBox="0 0 16 16" className="w-3.5 h-3.5"><line x1="1" y1="3" x2="15" y2="3" stroke="currentColor" strokeWidth="2"/><line x1="6" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="2"/><line x1="3" y1="13" x2="15" y2="13" stroke="currentColor" strokeWidth="2"/></svg>
             </ToolbarButton>
           </div>

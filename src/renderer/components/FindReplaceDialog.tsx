@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useDocumentStore } from '../store/document'
+import { CharFormat, DEFAULT_CHAR_FORMAT } from '@shared/types'
 
 interface FindReplaceDialogProps {
   isOpen: boolean
@@ -8,7 +9,6 @@ interface FindReplaceDialogProps {
 
 export const FindReplaceDialog: React.FC<FindReplaceDialogProps> = ({ isOpen, onClose }) => {
   const word = useDocumentStore(state => state.word)
-  const updateWordValue = useDocumentStore(state => state.updateWordValue)
   const saveToHistory = useDocumentStore(state => state.saveToHistory)
 
   const [findText, setFindText] = useState('')
@@ -48,6 +48,31 @@ export const FindReplaceDialog: React.FC<FindReplaceDialogProps> = ({ isOpen, on
     performSearch()
   }
 
+  const replaceWithCharFormats = (currentValue: string, index: number, findLen: number, replacement: string) => {
+    // Build new value
+    const newValue = currentValue.slice(0, index) + replacement + currentValue.slice(index + findLen)
+
+    // Build new charFormats: keep formats for unchanged parts, use format at match start for replacement chars
+    const oldFormats = word.charFormats ?? Array.from({ length: currentValue.length }, () => ({ ...DEFAULT_CHAR_FORMAT }))
+    const inheritFmt = oldFormats[index] || DEFAULT_CHAR_FORMAT
+
+    const newFormats: CharFormat[] = [
+      ...oldFormats.slice(0, index),
+      ...Array.from({ length: replacement.length }, () => ({ ...inheritFmt })),
+      ...oldFormats.slice(index + findLen),
+    ]
+
+    // Directly set the word state with preserved charFormats
+    useDocumentStore.setState(state => ({
+      word: {
+        ...state.word,
+        value: newValue === '' ? null : newValue,
+        charFormats: newFormats.length > 0 ? newFormats : null,
+      },
+      isDirty: true,
+    }))
+  }
+
   const handleReplace = () => {
     if (!found) return
 
@@ -59,8 +84,7 @@ export const FindReplaceDialog: React.FC<FindReplaceDialogProps> = ({ isOpen, on
     const index = valueToSearch.indexOf(searchTerm)
 
     if (index !== -1) {
-      const newValue = currentValue.slice(0, index) + replaceText + currentValue.slice(index + findText.length)
-      updateWordValue(newValue)
+      replaceWithCharFormats(currentValue, index, findText.length, replaceText)
       setTimeout(performSearch, 100)
     }
   }
@@ -70,20 +94,44 @@ export const FindReplaceDialog: React.FC<FindReplaceDialogProps> = ({ isOpen, on
 
     saveToHistory('Replace All')
 
-    const currentValue = String(word.value ?? '')
-    const regex = new RegExp(escapeRegExp(findText), matchCase ? 'g' : 'gi')
-    const matches = currentValue.match(regex)
+    let currentValue = String(word.value ?? '')
+    let currentFormats = word.charFormats ? [...word.charFormats] : Array.from({ length: currentValue.length }, () => ({ ...DEFAULT_CHAR_FORMAT }))
+    let count = 0
+    let searchFrom = 0
 
-    if (matches && matches.length > 0) {
-      const newValue = currentValue.replace(regex, replaceText)
-      updateWordValue(newValue)
-      alert(`Replaced ${matches.length} occurrence(s)`)
+    while (true) {
+      const searchTerm = matchCase ? findText : findText.toLowerCase()
+      const valueToSearch = matchCase ? currentValue : currentValue.toLowerCase()
+      const index = valueToSearch.indexOf(searchTerm, searchFrom)
+
+      if (index === -1) break
+
+      const inheritFmt = currentFormats[index] || DEFAULT_CHAR_FORMAT
+      const replacementFormats = Array.from({ length: replaceText.length }, () => ({ ...inheritFmt }))
+
+      currentValue = currentValue.slice(0, index) + replaceText + currentValue.slice(index + findText.length)
+      currentFormats = [
+        ...currentFormats.slice(0, index),
+        ...replacementFormats,
+        ...currentFormats.slice(index + findText.length),
+      ]
+
+      searchFrom = index + replaceText.length
+      count++
+    }
+
+    if (count > 0) {
+      useDocumentStore.setState(state => ({
+        word: {
+          ...state.word,
+          value: currentValue === '' ? null : currentValue,
+          charFormats: currentFormats.length > 0 ? currentFormats : null,
+        },
+        isDirty: true,
+      }))
+      alert(`Replaced ${count} occurrence(s)`)
       performSearch()
     }
-  }
-
-  const escapeRegExp = (string: string) => {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useDocumentStore } from '../store/document'
+import { useSelectionStore } from '../store/selection'
 import {
   WordFormat,
+  CharFormat,
   TextAlign,
 } from '@shared/types'
 import { FONT_FAMILIES } from '../utils/formatValue'
@@ -16,25 +18,61 @@ type TabType = 'alignment' | 'font' | 'fill'
 export const FormatWordDialog: React.FC<FormatWordDialogProps> = ({ isOpen, onClose }) => {
   const word = useDocumentStore(state => state.word)
   const updateWordFormat = useDocumentStore(state => state.updateWordFormat)
+  const updateCharFormat = useDocumentStore(state => state.updateCharFormat)
+  const updateAllCharFormat = useDocumentStore(state => state.updateAllCharFormat)
+  const getCommonCharFormat = useDocumentStore(state => state.getCommonCharFormat)
+  const getCharFormatAt = useDocumentStore(state => state.getCharFormatAt)
+
+  const { selectionStart, selectionEnd, hasSelection } = useSelectionStore()
 
   const [activeTab, setActiveTab] = useState<TabType>('font')
-  const [localFormat, setLocalFormat] = useState<WordFormat | null>(null)
+  const [localWordFormat, setLocalWordFormat] = useState<WordFormat | null>(null)
+  const [localCharFormat, setLocalCharFormat] = useState<CharFormat | null>(null)
 
   useEffect(() => {
     if (isOpen) {
-      setLocalFormat(JSON.parse(JSON.stringify(word.format)))
-    }
-  }, [isOpen, word])
+      setLocalWordFormat({ ...word.format })
 
-  if (!isOpen || !localFormat) return null
+      // Get current char format based on selection
+      const charFmt = hasSelection
+        ? getCommonCharFormat(selectionStart, selectionEnd)
+        : getCharFormatAt(Math.max(0, selectionStart - 1))
+
+      // Fill undefined (mixed) values with defaults for the local editor
+      setLocalCharFormat({
+        bold: charFmt.bold ?? false,
+        italic: charFmt.italic ?? false,
+        underline: charFmt.underline ?? false,
+        strikethrough: charFmt.strikethrough ?? false,
+        fontSize: charFmt.fontSize ?? 14,
+        fontFamily: charFmt.fontFamily ?? 'Arial',
+        fontColor: charFmt.fontColor ?? '#000000',
+        backgroundColor: charFmt.backgroundColor ?? 'transparent',
+      })
+    }
+  }, [isOpen, word, hasSelection, selectionStart, selectionEnd, getCommonCharFormat, getCharFormatAt])
+
+  if (!isOpen || !localWordFormat || !localCharFormat) return null
 
   const handleApply = () => {
-    updateWordFormat(localFormat)
+    // Apply word-level format
+    updateWordFormat(localWordFormat)
+
+    // Apply char-level format to selection or all
+    if (hasSelection) {
+      updateCharFormat(localCharFormat, selectionStart, selectionEnd)
+    } else {
+      updateAllCharFormat(localCharFormat)
+    }
     onClose()
   }
 
-  const updateFormat = (updates: Partial<WordFormat>) => {
-    setLocalFormat(prev => prev ? { ...prev, ...updates } : prev)
+  const updateLocalWordFormat = (updates: Partial<WordFormat>) => {
+    setLocalWordFormat(prev => prev ? { ...prev, ...updates } : prev)
+  }
+
+  const updateLocalCharFormat = (updates: Partial<CharFormat>) => {
+    setLocalCharFormat(prev => prev ? { ...prev, ...updates } : prev)
   }
 
   const tabs: { id: TabType; label: string }[] = [
@@ -87,20 +125,20 @@ export const FormatWordDialog: React.FC<FormatWordDialogProps> = ({ isOpen, onCl
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {activeTab === 'alignment' && (
-            <AlignmentTab format={localFormat} updateFormat={updateFormat} />
+            <AlignmentTab format={localWordFormat} updateFormat={updateLocalWordFormat} />
           )}
           {activeTab === 'font' && (
             <FontTab
-              format={localFormat}
-              updateFormat={updateFormat}
+              format={localCharFormat}
+              updateFormat={updateLocalCharFormat}
               colorOptions={colorOptions}
               fontSizes={fontSizes}
             />
           )}
           {activeTab === 'fill' && (
             <FillTab
-              format={localFormat}
-              updateFormat={updateFormat}
+              charFormat={localCharFormat}
+              updateFormat={updateLocalCharFormat}
               colorOptions={colorOptions}
             />
           )}
@@ -157,8 +195,8 @@ const AlignmentTab: React.FC<AlignmentTabProps> = ({ format, updateFormat }) => 
 
 // Font Tab
 interface FontTabProps {
-  format: WordFormat
-  updateFormat: (updates: Partial<WordFormat>) => void
+  format: CharFormat
+  updateFormat: (updates: Partial<CharFormat>) => void
   colorOptions: string[]
   fontSizes: number[]
 }
@@ -282,12 +320,12 @@ const FontTab: React.FC<FontTabProps> = ({ format, updateFormat, colorOptions, f
 
 // Fill Tab
 interface FillTabProps {
-  format: WordFormat
-  updateFormat: (updates: Partial<WordFormat>) => void
+  charFormat: CharFormat
+  updateFormat: (updates: Partial<CharFormat>) => void
   colorOptions: string[]
 }
 
-const FillTab: React.FC<FillTabProps> = ({ format, updateFormat, colorOptions }) => {
+const FillTab: React.FC<FillTabProps> = ({ charFormat, updateFormat, colorOptions }) => {
   return (
     <div className="space-y-4">
       <div>
@@ -297,7 +335,7 @@ const FillTab: React.FC<FillTabProps> = ({ format, updateFormat, colorOptions })
             <button
               key={color}
               className={`w-6 h-6 border rounded hover:scale-110 transition-transform ${
-                format.backgroundColor === color ? 'ring-2 ring-blue-500' : ''
+                charFormat.backgroundColor === color ? 'ring-2 ring-blue-500' : ''
               }`}
               style={{ backgroundColor: color }}
               onClick={() => updateFormat({ backgroundColor: color })}
@@ -311,16 +349,16 @@ const FillTab: React.FC<FillTabProps> = ({ format, updateFormat, colorOptions })
         <label className="text-xs text-gray-500 block mb-2">Preview:</label>
         <div
           className="w-full h-16 border rounded flex items-center justify-center"
-          style={{ backgroundColor: format.backgroundColor }}
+          style={{ backgroundColor: charFormat.backgroundColor }}
         >
-          <span style={{ color: format.fontColor }}>Sample</span>
+          <span style={{ color: charFormat.fontColor }}>Sample</span>
         </div>
       </div>
 
       {/* No fill button */}
       <button
         className="px-3 py-1.5 text-sm border rounded hover:bg-gray-100"
-        onClick={() => updateFormat({ backgroundColor: '#ffffff' })}
+        onClick={() => updateFormat({ backgroundColor: 'transparent' })}
       >
         No Fill
       </button>

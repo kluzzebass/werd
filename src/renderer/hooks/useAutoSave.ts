@@ -9,7 +9,6 @@ export function useAutoSave() {
   const getDocumentData = useDocumentStore(state => state.getDocumentData)
   const loadDocument = useDocumentStore(state => state.loadDocument)
   const isDirty = useDocumentStore(state => state.isDirty)
-  const filePath = useDocumentStore(state => state.filePath)
 
   const lastSaveRef = useRef<number>(Date.now())
 
@@ -29,15 +28,11 @@ export function useAutoSave() {
 
   // Save on page unload
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const handleBeforeUnload = () => {
       if (isDirty) {
         const data = getDocumentData()
         localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data))
         localStorage.setItem(AUTOSAVE_TIMESTAMP_KEY, String(Date.now()))
-
-        // Show confirmation dialog
-        e.preventDefault()
-        e.returnValue = ''
       }
     }
 

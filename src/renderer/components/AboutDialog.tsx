@@ -1,5 +1,5 @@
 import React from 'react'
-import iconUrl from '../assets/icon.svg'
+import iconUrl from '../assets/icon.png'
 
 interface AboutDialogProps {
   isOpen: boolean

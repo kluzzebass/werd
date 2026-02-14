@@ -11,6 +11,7 @@ if (process.platform === 'darwin') {
 }
 
 let mainWindow: BrowserWindow | null = null
+let forceClose = false
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -37,10 +38,52 @@ function createWindow() {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
+  // Intercept close to check for unsaved changes
+  mainWindow.on('close', (e) => {
+    if (forceClose) return
+    e.preventDefault()
+    mainWindow!.webContents.send('before-close')
+  })
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })
 }
+
+// Handle close negotiation with renderer
+ipcMain.on('before-close-response', async (_event, isDirty: boolean) => {
+  if (!mainWindow) return
+
+  if (!isDirty) {
+    forceClose = true
+    mainWindow.close()
+    return
+  }
+
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    buttons: ['Save', "Don't Save", 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+    message: 'Do you want to save changes?',
+    detail: "Your changes will be lost if you don't save them."
+  })
+
+  if (response === 0) {
+    // Save — tell renderer to save, then close
+    mainWindow.webContents.send('save-and-close')
+  } else if (response === 1) {
+    // Don't Save — tell renderer to discard, then close
+    mainWindow.webContents.send('discard-and-close')
+  }
+  // Cancel — do nothing
+})
+
+ipcMain.on('ready-to-close', () => {
+  if (!mainWindow) return
+  forceClose = true
+  mainWindow.close()
+})
 
 function createMenu(): Menu {
   const template: Electron.MenuItemConstructorOptions[] = [
@@ -86,13 +129,7 @@ function createMenu(): Menu {
           click: () => sendMenuAction('save-as')
         },
         { type: 'separator' },
-        { role: 'close' },
-        { type: 'separator' },
-        {
-          label: 'Quit',
-          accelerator: 'CmdOrCtrl+Q',
-          click: () => app.quit()
-        }
+        { role: 'close' }
       ]
     },
     {

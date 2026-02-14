@@ -16,6 +16,11 @@ declare global {
       saveFile: (data: string, filePath?: string) => Promise<string | null>
       openFile: () => Promise<{ data: string; filePath: string } | null>
       setTitle: (title: string) => void
+      onBeforeClose: (callback: () => void) => void
+      respondBeforeClose: (isDirty: boolean) => void
+      onSaveAndClose: (callback: () => void) => void
+      onDiscardAndClose: (callback: () => void) => void
+      readyToClose: () => void
     }
   }
 }
@@ -209,7 +214,7 @@ export const App: React.FC = () => {
 
   // Handle menu actions
   useEffect(() => {
-    if (window.electronAPI?.onMenuAction) {
+    if (window.electronAPI) {
       window.electronAPI.onMenuAction((action) => {
         switch (action) {
           case 'new':
@@ -228,6 +233,30 @@ export const App: React.FC = () => {
             setShowAbout(true)
             break
         }
+      })
+
+      // Close negotiation with main process
+      window.electronAPI.onBeforeClose(() => {
+        const isDirty = useDocumentStore.getState().isDirty
+        window.electronAPI!.respondBeforeClose(isDirty)
+      })
+
+      window.electronAPI.onSaveAndClose(async () => {
+        const state = useDocumentStore.getState()
+        const data = JSON.stringify(state.getDocumentData(), null, 2)
+        const savedPath = await window.electronAPI!.saveFile(data, state.filePath || undefined)
+        if (savedPath) {
+          window.electronAPI!.readyToClose()
+        }
+        // If save was cancelled/failed, don't close
+      })
+
+      window.electronAPI.onDiscardAndClose(() => {
+        // Clear autosave and mark clean so beforeunload doesn't re-save
+        useDocumentStore.getState().setDirty(false)
+        localStorage.removeItem('werd-autosave')
+        localStorage.removeItem('werd-autosave-timestamp')
+        window.electronAPI!.readyToClose()
       })
     }
   }, [])

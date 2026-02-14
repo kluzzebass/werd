@@ -1,7 +1,7 @@
 {
   "name": "werd",
-  "version": "1.0.0",
-  "description": "The One-Word Word Processor - A word processor where each page contains exactly one word",
+  "version": "0.0.1",
+  "description": "The One-Word Word Processor",
   "author": "Jan Fredrik Leversund",
   "type": "module",
   "main": "dist/main/index.js",

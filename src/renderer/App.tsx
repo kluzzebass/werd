@@ -41,7 +41,7 @@ export const App: React.FC = () => {
 
   const [showFormatDialog, setShowFormatDialog] = useState(false)
   const [showFindReplace, setShowFindReplace] = useState(false)
-  const [showAbout, setShowAbout] = useState(false)
+  const [showAbout, setShowAbout] = useState(true)
   const [zoom, setZoom] = useState(() => {
     const saved = localStorage.getItem('werd-zoom')
     return saved ? parseInt(saved) : 100

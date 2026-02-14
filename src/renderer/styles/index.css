@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+@theme {
+  --color-word-blue: #2b579a;
+  --color-word-dark-blue: #1e3f6f;
+  --color-toolbar-gray: #f3f3f3;
+  --color-tab-active: #ffffff;
+  --color-tab-inactive: #e7e7e7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Selection styling */
+::selection {
+  background: #2b579a;
+  color: white;
+}
+
+/* Dark mode styles */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+/* Dark mode component overrides */
+.dark .bg-white:not(.document-page) {
+  background-color: #252526 !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: #2d2d2d !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #333333 !important;
+}
+
+.dark .bg-gray-200 {
+  background-color: #3c3c3c !important;
+}
+
+.dark .bg-toolbar-gray {
+  background-color: #2d2d2d !important;
+}
+
+.dark .text-gray-700 {
+  color: #c0c0c0 !important;
+}
+
+.dark .text-gray-600 {
+  color: #a0a0a0 !important;
+}
+
+.dark .text-gray-500 {
+  color: #888 !important;
+}
+
+.dark .text-gray-400 {
+  color: #666 !important;
+}
+
+.dark .border-gray-300 {
+  border-color: #444 !important;
+}
+
+.dark .border-gray-400 {
+  border-color: #555 !important;
+}
+
+.dark .border-gray-200 {
+  border-color: #3c3c3c !important;
+}
+
+.dark input:not(.document-input),
+.dark select,
+.dark textarea:not(.document-input) {
+  background-color: #3c3c3c !important;
+  border-color: #555 !important;
+  color: #e0e0e0 !important;
+}
+
+.dark .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5) !important;
+}

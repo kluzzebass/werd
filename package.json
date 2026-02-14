@@ -1,0 +1,85 @@
+{
+  "name": "werd",
+  "version": "1.0.0",
+  "description": "The One-Word Word Processor - A word processor where each page contains exactly one word",
+  "author": "Jan Fredrik Leversund",
+  "type": "module",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "dev:web": "vite",
+    "build": "electron-vite build",
+    "build:web": "vite build",
+    "preview": "electron-vite preview",
+    "preview:web": "vite preview",
+    "package": "electron-builder",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.1.0",
+    "@fortawesome/free-solid-svg-icons": "^7.1.0",
+    "@fortawesome/react-fontawesome": "^3.1.1",
+    "@types/file-saver": "^2.0.7",
+    "docx": "^9.5.2",
+    "file-saver": "^2.0.5",
+    "mammoth": "^1.11.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "uuid": "^13.0.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/node": "^25.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "@vitest/coverage-v8": "^4.0.17",
+    "electron": "^40.0.0",
+    "electron-builder": "^26.5.0",
+    "electron-vite": "^5.0.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.8.0",
+    "vite": "^7.3.0",
+    "vitest": "^4.0.17"
+  },
+  "overrides": {
+    "tar": "^6.2.1",
+    "glob": "^11.0.0",
+    "inflight": "npm:lru-cache@^11.0.0",
+    "rimraf": "^6.0.0",
+    "@electron/get": "^4.0.2"
+  },
+  "build": {
+    "appId": "com.werd.app",
+    "productName": "Werd",
+    "files": [
+      "dist/**/*"
+    ],
+    "directories": {
+      "buildResources": "resources"
+    },
+    "mac": {
+      "target": "zip",
+      "artifactName": "${productName}-${version}.${ext}",
+      "icon": "resources/icon.icns",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist",
+      "notarize": true
+    },
+    "copyright": "Copyright © 2026 Jan Fredrik Leversund",
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "resources/icon.png"
+    }
+  }
+}
